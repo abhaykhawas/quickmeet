@@ -24,7 +24,7 @@ export function Landing() {
         <div className="nav-links">
           <a href="#features">Features</a>
           <a href="/docs">Docs</a>
-          <a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/abhaykhawas/quickmeet" target="_blank" rel="noreferrer">GitHub</a>
         </div>
         <a className="nav-create" href="/create">Create room <span>↗</span></a>
       </nav>
