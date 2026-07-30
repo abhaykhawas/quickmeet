@@ -1,12 +1,28 @@
 # QuickMeet in a MERN application
 
-This guide integrates the self-hosted QuickMeet server and React conference UI into an existing MERN application:
+This guide integrates the published QuickMeet npm packages and the deployed
+QuickMeet service into an existing MERN application:
 
 - MongoDB stores your application's calls and membership rules.
 - Express authenticates users, creates meetings, and issues join credentials.
 - React renders the meeting with `QuickMeetConference`.
-- QuickMeet manages meeting policy and signs LiveKit access tokens.
-- LiveKit carries camera, microphone, screen-share, and chat traffic.
+- The deployed QuickMeet API manages meeting policy and signs LiveKit access
+  tokens.
+- LiveKit Cloud carries camera, microphone, screen-share, and chat traffic.
+
+The deployed resources used by this guide are:
+
+| Resource | URL or package |
+| --- | --- |
+| QuickMeet API | `https://quickmeet-api-uui6.onrender.com` |
+| Hosted demo | `https://quickmeet-video.netlify.app` |
+| Express SDK | `@quickmeet/node@0.1.0` |
+| React component | `@quickmeet/react@0.1.0` |
+| Browser SDK | `@quickmeet/sdk@0.1.0` |
+
+The hosted demo proves the complete stack is running. A MERN application does
+not embed or call the Netlify demo; it calls the QuickMeet API from Express and
+renders the conference component inside its own React frontend.
 
 The recommended request flow is:
 
@@ -21,7 +37,7 @@ Your Express backend
       | @quickmeet/node
       | X-QuickMeet-API-Key (server only)
       v
-QuickMeet API -----------------> LiveKit
+Deployed QuickMeet API --------> LiveKit Cloud
       |                            ^
       | safe join credentials      |
       v                            | WebRTC
@@ -29,6 +45,12 @@ React application ----------------+
 ```
 
 The browser never receives `QUICKMEET_API_KEY`, `LIVEKIT_API_SECRET`, or permission to choose its own role.
+
+> [!IMPORTANT]
+> The trusted MERN flow requires a QuickMeet server API key. Obtain that value
+> from the owner of the QuickMeet deployment, or self-host QuickMeet and create
+> your own. Never copy the API key into React source, a `VITE_*` variable, or a
+> browser request.
 
 ## 1. Example project structure
 
@@ -60,47 +82,13 @@ my-mern-app/
 
 Node.js 20 or newer is required.
 
-## 2. Start the self-hosted QuickMeet services
+## 2. Connect to the deployed QuickMeet service
 
-QuickMeet runs beside your MERN application. It is not mounted inside Express.
-
-In the QuickMeet repository, configure `.env`:
-
-```dotenv
-# QuickMeet meeting API
-PORT=8787
-PUBLIC_API_URL=http://localhost:8787
-PUBLIC_APP_URL=http://localhost:3000
-QUICKMEET_API_KEY=replace-this-with-a-long-random-secret
-DEMO_MODE=false
-CORS_ORIGIN=http://localhost:3000
-
-# QuickMeet meeting storage
-MONGO_URI=mongodb+srv://username:password@cluster.example.mongodb.net/quickmeet
-MONGO_COLLECTION=quickmeet_meetings
-
-# Local LiveKit
-LIVEKIT_URL=ws://localhost:7880
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-```
-
-`PUBLIC_APP_URL` is used when QuickMeet creates invitation links. Point it at your React application in production.
-If your product only uses authenticated `/calls/:callId` joins, the trusted join flow does not use those generated links.
-
-Start LiveKit and only the QuickMeet API:
+You do not need Docker, a local LiveKit server, or a local copy of QuickMeet to
+follow this guide. Confirm the deployed API is reachable:
 
 ```bash
-docker compose up -d livekit
-npm run dev -w @quickmeet/server
-```
-
-Using only the API avoids starting the included demo frontend on port `5173`.
-
-Check the API:
-
-```bash
-curl http://localhost:8787/health
+curl https://quickmeet-api-uui6.onrender.com/health
 ```
 
 Expected response:
@@ -112,59 +100,61 @@ Expected response:
 }
 ```
 
+The API is hosted on Render's free tier, so its first request after a period of
+inactivity can take longer while the service wakes up. Subsequent requests are
+normally faster.
+
+Ask the deployment owner for these two server-side values:
+
+```dotenv
+QUICKMEET_API_URL=https://quickmeet-api-uui6.onrender.com
+QUICKMEET_API_KEY=the-server-key-provided-to-your-backend
+```
+
+The API key is a server credential, not an npm token or a LiveKit credential.
+Only your Express backend needs it. The QuickMeet deployment already owns its
+MongoDB Atlas and LiveKit Cloud configuration.
+
+The current deployment has `DEMO_MODE=true` so the public demo can create
+meetings. Trusted token issuance still requires the server API key. Do not build
+a production authorization model around anonymous demo creation.
+
+If you prefer to operate an isolated QuickMeet instance, follow
+[`DEPLOYMENT.md`](./DEPLOYMENT.md), set `DEMO_MODE=false`, and use that
+instance's URL and API key in the same MERN code below.
+
 ## 3. Install the SDK packages
 
-When the packages are available from your npm registry, install them normally.
+The QuickMeet packages are published publicly on npm. Version `0.1.0` is the
+version tested by this guide.
 
 In the Express application:
 
 ```bash
 cd my-mern-app/server
-npm install @quickmeet/node
+npm install @quickmeet/node@0.1.0
 ```
 
 In the React application:
 
 ```bash
 cd my-mern-app/client
-npm install @quickmeet/react @quickmeet/sdk livekit-client @livekit/components-react
+npm install @quickmeet/react@0.1.0
 ```
 
-### Using this repository before publishing the packages
+`@quickmeet/react` installs its compatible LiveKit and browser SDK dependencies.
+An existing React application must already have React 18 or newer.
 
-Build and package the SDKs from the QuickMeet repository:
-
-```bash
-npm run build
-mkdir -p artifacts
-npm pack -w @quickmeet/sdk --pack-destination artifacts
-npm pack -w @quickmeet/node --pack-destination artifacts
-npm pack -w @quickmeet/react --pack-destination artifacts
-```
-
-This creates versioned `.tgz` packages under `artifacts/`.
-
-Install both the shared SDK and Node SDK in your Express application:
-
-```bash
-cd my-mern-app/server
-npm install \
-  /absolute/path/to/video_conference/artifacts/quickmeet-sdk-0.1.0.tgz \
-  /absolute/path/to/video_conference/artifacts/quickmeet-node-0.1.0.tgz
-```
-
-Install the shared SDK and React SDK in your frontend:
+Only install the standalone browser SDK if you implement the optional public
+invitation flow in section 9:
 
 ```bash
 cd my-mern-app/client
-npm install \
-  /absolute/path/to/video_conference/artifacts/quickmeet-sdk-0.1.0.tgz \
-  /absolute/path/to/video_conference/artifacts/quickmeet-react-0.1.0.tgz \
-  livekit-client \
-  @livekit/components-react
+npm install @quickmeet/sdk@0.1.0
 ```
 
-Rebuild and reinstall the tarballs after changing SDK source code.
+You can omit `@0.1.0` to install the latest published version. Pinning the
+version makes an example application reproducible.
 
 ## 4. Express backend
 
@@ -202,11 +192,13 @@ CLIENT_URL=http://localhost:3000
 JWT_SECRET=replace-with-your-existing-jwt-secret
 
 # Server-to-server QuickMeet connection
-QUICKMEET_API_URL=http://localhost:8787
-QUICKMEET_API_KEY=replace-this-with-the-same-secret-used-by-quickmeet
+QUICKMEET_API_URL=https://quickmeet-api-uui6.onrender.com
+QUICKMEET_API_KEY=ask-the-quickmeet-deployment-owner-for-this-value
 ```
 
 Do not prefix either QuickMeet value with `VITE_` or otherwise expose them to the React build.
+Your application's `MONGODB_URI` is separate from the MongoDB Atlas database
+used internally by the deployed QuickMeet API.
 
 ### `server/src/quickmeet.js`
 
@@ -214,6 +206,12 @@ Create one server client and reuse it:
 
 ```js
 import { QuickMeetServerClient } from '@quickmeet/node';
+
+if (!process.env.QUICKMEET_API_URL || !process.env.QUICKMEET_API_KEY) {
+  throw new Error(
+    'QUICKMEET_API_URL and QUICKMEET_API_KEY must be configured.',
+  );
+}
 
 export const quickmeet = new QuickMeetServerClient({
   apiUrl: process.env.QUICKMEET_API_URL,
@@ -882,26 +880,23 @@ The conference component automatically:
 - switches to the screen-share presentation layout;
 - cleans up its LiveKit connection when it unmounts.
 
-## 6. Run the complete local system
+## 6. Run the MERN application against deployed QuickMeet
 
-Four processes are involved:
+QuickMeet and LiveKit are already deployed. Locally, you only run your MERN
+application and its database:
 
 ```text
-MongoDB             mongodb://127.0.0.1:27017
-LiveKit             ws://localhost:7880
-QuickMeet API         http://localhost:8787
+Your MongoDB         mongodb://127.0.0.1:27017 (or your Atlas URI)
 Your Express API     http://localhost:5000
 Your React app       http://localhost:3000
+
+Remote QuickMeet     https://quickmeet-api-uui6.onrender.com
+Remote LiveKit       returned securely in the join credentials
 ```
 
-Start them in separate terminals.
-
-QuickMeet repository:
-
-```bash
-docker compose up -d livekit
-npm run dev -w @quickmeet/server
-```
+Make sure `server/.env` contains the deployed QuickMeet URL and the server API
+key provided to you. Then start the MERN backend and frontend in separate
+terminals.
 
 MERN backend:
 
@@ -926,6 +921,8 @@ Then:
 5. Test camera and microphone using two browsers or a normal and private window.
 
 Camera, microphone, and screen sharing require `localhost` or HTTPS.
+If the first meeting request is slow, allow time for the free Render service to
+wake up before retrying.
 
 ## 7. How feature selection works
 
@@ -1014,7 +1011,7 @@ A public React invitation page can exchange that key with the browser SDK:
 import { QuickMeetClient } from '@quickmeet/sdk';
 
 const quickmeet = new QuickMeetClient({
-  apiUrl: 'http://localhost:8787',
+  apiUrl: 'https://quickmeet-api-uui6.onrender.com',
 });
 
 const accessKey =
@@ -1028,43 +1025,68 @@ const credentials = await quickmeet.joinMeeting(meetingSlug, {
 
 Pass the returned `credentials` to `QuickMeetConference`. An invite-only meeting rejects missing or invalid access keys.
 
-For this direct-browser flow, `CORS_ORIGIN` on the QuickMeet service must contain the React application's origin.
-
-## 10. Production configuration
-
-Change the local development values before deployment:
+For this direct-browser flow, the QuickMeet deployment's `CORS_ORIGIN` must
+contain the React application's exact origin. It accepts a comma-separated list,
+for example:
 
 ```dotenv
-DEMO_MODE=false
-CORS_ORIGIN=https://app.example.com
-PUBLIC_APP_URL=https://app.example.com
-MONGO_URI=mongodb+srv://username:password@cluster.example.mongodb.net/quickmeet
-MONGO_COLLECTION=quickmeet_meetings
-LIVEKIT_URL=wss://livekit.example.com
-LIVEKIT_API_KEY=production-livekit-key
-LIVEKIT_API_SECRET=production-livekit-secret
-QUICKMEET_API_KEY=a-separate-long-random-secret
+CORS_ORIGIN=https://quickmeet-video.netlify.app,https://app.example.com,http://localhost:3000
 ```
 
-Production requirements:
+The deployed API currently allows the hosted QuickMeet demo origin. Ask the
+deployment owner to add your development and production React origins before
+using `@quickmeet/sdk` directly in a browser. The recommended signed-in flow in
+sections 4 and 5 calls QuickMeet from Express, so it does not require this CORS
+change.
+
+## 10. Deploy the MERN application
+
+Deploy your own Express API with these server-only environment variables:
+
+```dotenv
+PORT=5000
+MONGODB_URI=mongodb+srv://username:password@cluster.example.mongodb.net/my-mern-app
+CLIENT_URL=https://app.example.com
+JWT_SECRET=your-application-authentication-secret
+QUICKMEET_API_URL=https://quickmeet-api-uui6.onrender.com
+QUICKMEET_API_KEY=the-server-key-provided-to-your-backend
+```
+
+Configure the deployed React application with the URL of your Express API:
+
+```dotenv
+VITE_API_URL=https://api.example.com/api
+```
+
+Only `VITE_API_URL` belongs in the React build. The React application obtains a
+short-lived participant token from your authenticated `/api/calls/:callId/join`
+route and then connects directly to LiveKit Cloud.
+
+Deployment requirements:
 
 - Serve the React and Express applications over HTTPS.
-- Serve LiveKit signaling over WSS.
-- Keep `QUICKMEET_API_KEY` only in Express and the QuickMeet service.
-- Keep `LIVEKIT_API_SECRET` only in the QuickMeet service.
-- Keep `MONGO_URI` only in the QuickMeet service.
-- Configure LiveKit's public IP, UDP ports, TURN, TLS, and Redis as required.
-- Back up the MongoDB collection used for persistent meeting definitions.
+- Keep `QUICKMEET_API_KEY` only in the Express deployment.
+- Do not add QuickMeet, LiveKit, or MongoDB secrets to Netlify/Vite.
+- Restrict your Express CORS configuration to the deployed React origin.
 - Add rate limiting and your normal audit logging to call creation and join routes.
 - Do not log participant tokens or invitation access keys.
 - Validate that the authenticated user is still a call member on every join.
+- Handle upstream `401` responses as a missing or incorrect QuickMeet API key.
+- Allow for a cold-start delay while the QuickMeet API remains on Render's free
+  tier.
+
+The current QuickMeet server uses one deployment-wide API key; it does not yet
+issue a different key to every outside developer. Share that key only with
+trusted backend operators. For unrelated third-party production systems, either
+self-host QuickMeet or add tenant-specific API keys, quotas, and revocation
+before operating the deployment as a public SaaS.
 
 ## 11. Integration checklist
 
-- [ ] LiveKit is reachable from participants' browsers.
-- [ ] The QuickMeet API health endpoint returns `200`.
-- [ ] `DEMO_MODE=false` outside the included demo environment.
-- [ ] Express and QuickMeet use the same `QUICKMEET_API_KEY`.
+- [ ] `npm install @quickmeet/node@0.1.0` succeeds in the Express application.
+- [ ] `npm install @quickmeet/react@0.1.0` succeeds in the React application.
+- [ ] `https://quickmeet-api-uui6.onrender.com/health` returns `200`.
+- [ ] Express has the QuickMeet server API key supplied by the deployment owner.
 - [ ] The API key is absent from the React bundle and browser network requests.
 - [ ] Express derives participant identity and role from trusted application data.
 - [ ] The React conference parent has a defined height.
@@ -1072,3 +1094,4 @@ Production requirements:
 - [ ] Camera and microphone are tested through HTTPS or `localhost`.
 - [ ] Two different authenticated users can join the same MongoDB call.
 - [ ] Disabled features are absent and rejected by LiveKit permissions.
+- [ ] Direct browser invitation flows have an allowed QuickMeet CORS origin.

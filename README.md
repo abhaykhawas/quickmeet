@@ -29,6 +29,7 @@ docs/
   API.md
   DEPLOYMENT.md
   INTEGRATION.md
+  MERN_INTEGRATION.md
 ```
 
 ## Run locally
@@ -82,7 +83,10 @@ Your frontend <──────────────────── Your
       └── @quickmeet/react ─────────> LiveKit
 ```
 
-See [docs/INTEGRATION.md](docs/INTEGRATION.md) for complete Express, Next.js-style, React, and vanilla JavaScript examples.
+See [docs/INTEGRATION.md](docs/INTEGRATION.md) for the general SDK guide, or
+[docs/MERN_INTEGRATION.md](docs/MERN_INTEGRATION.md) for a complete MongoDB,
+Express, React, and Node.js example using the deployed QuickMeet API and
+published npm packages.
 
 ## Feature selection
 
