@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build -w @quickmeet/sdk && npm run build -w @quickmeet/react && npm run build -w @quickmeet/demo"
+  publish = "apps/demo/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

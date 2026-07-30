@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: quickmeet-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./apps/server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: QUICKMEET_API_KEY
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_COLLECTION
+        value: quickmeet_meetings
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+

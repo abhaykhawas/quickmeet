@@ -28,6 +28,79 @@ For a single server, a reverse proxy may route:
 
 Follow LiveKit’s self-hosting guide for public IP discovery, firewall ports, TLS, TURN, Redis, and multi-node configuration.
 
+## Managed free-tier deployment
+
+The repository includes provider configuration for this topology:
+
+- Netlify serves the React/Vite demo from `apps/demo/dist`.
+- Render builds the API from `apps/server/Dockerfile`.
+- LiveKit Cloud provides the WebRTC signaling, SFU, TURN, and media network.
+- MongoDB Atlas stores meeting definitions.
+
+### 1. LiveKit Cloud
+
+Create a LiveKit Cloud project and a service-account API key. Keep the generated
+secret open until it has been copied into Render. You need:
+
+```dotenv
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=API...
+LIVEKIT_API_SECRET=...
+```
+
+Do not put these values in Netlify or frontend code.
+
+### 2. Netlify site URL
+
+Import the GitHub repository into Netlify. The root `netlify.toml` sets the
+monorepo build command, publish directory, Node version, and SPA fallback.
+
+The first build can run before the API URL is known. Record the generated
+`https://<site>.netlify.app` URL for the Render configuration.
+
+### 3. Render API
+
+Create a Render Blueprint from this repository. The root `render.yaml`:
+
+- uses the free web-service instance in Singapore;
+- builds the server Dockerfile with the repository root as its Docker context;
+- probes `/health`;
+- generates `QUICKMEET_API_KEY`; and
+- prompts for every provider secret instead of storing it in Git.
+
+Set both `PUBLIC_APP_URL` and `CORS_ORIGIN` to the production Netlify origin.
+Set `MONGO_URI` to the Atlas connection string and add the three LiveKit values
+from step 1.
+
+The checked-in Blueprint sets `DEMO_MODE=true` because the included public demo
+creates meetings directly from the browser. For an application that creates
+meetings through its own authenticated backend, switch this to `false` and use
+`QUICKMEET_API_KEY` only from that trusted backend.
+
+### 4. Netlify API URL
+
+After Render is live, add this Netlify environment variable and redeploy:
+
+```dotenv
+VITE_QUICKMEET_API_URL=https://<service>.onrender.com
+```
+
+Vite compiles this public API origin into the frontend bundle. No API or
+LiveKit secret belongs in Netlify.
+
+### 5. Verify
+
+Check the API first:
+
+```bash
+curl https://<service>.onrender.com/health
+```
+
+Then create and join a meeting on the Netlify site. Use a second browser or
+private window to verify camera, microphone, screen sharing, chat, and the
+participant layout. The browser should connect directly to the LiveKit Cloud
+WSS endpoint using a short-lived token issued by the Render API.
+
 ## Required environment variables
 
 ```dotenv
