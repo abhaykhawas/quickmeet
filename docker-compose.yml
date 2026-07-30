@@ -1,0 +1,43 @@
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    # Docker's bridge IP is unreachable from a host browser. Advertise localhost
+    # so WebRTC uses the TCP/UDP ports published below during local development.
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      PORT: 8787
+      PUBLIC_API_URL: http://localhost:8787
+      PUBLIC_APP_URL: http://localhost:5173
+      QUICKMEET_API_KEY: ${QUICKMEET_API_KEY:-local-development-key}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      MONGO_URI: ${MONGO_URI:?Set MONGO_URI in .env}
+      MONGO_COLLECTION: ${MONGO_COLLECTION:-quickmeet_meetings}
+      LIVEKIT_URL: ws://localhost:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+    ports:
+      - "8787:8787"
+    depends_on:
+      - livekit
+
+  demo:
+    build:
+      context: .
+      dockerfile: apps/demo/Dockerfile
+      args:
+        VITE_QUICKMEET_API_URL: http://localhost:8787
+    ports:
+      - "5173:80"
+    depends_on:
+      - api

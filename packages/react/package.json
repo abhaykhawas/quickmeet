@@ -1,0 +1,52 @@
+{
+  "name": "@quickmeet/react",
+  "version": "0.1.0",
+  "description": "Drop-in React video conference UI for QuickMeet",
+  "license": "Apache-2.0",
+  "keywords": [
+    "quickmeet",
+    "react",
+    "video-conferencing",
+    "webrtc",
+    "livekit"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build && node scripts/check-bundle.mjs && tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.17",
+    "@quickmeet/sdk": "0.1.0",
+    "livekit-client": "^2.15.2"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

@@ -1,0 +1,12 @@
+.env
+.git
+.gitignore
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+*.log
+apps/server/data/*.json
+.npm-publish-auth.*
+npm-package-smoke-*

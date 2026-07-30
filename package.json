@@ -1,0 +1,32 @@
+{
+  "name": "quickmeet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted, embeddable video conferencing SDK",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @quickmeet/server\" \"npm run dev -w @quickmeet/demo\"",
+    "dev:media": "docker compose up livekit",
+    "build": "npm run build -w @quickmeet/sdk && npm run build -w @quickmeet/node && npm run build -w @quickmeet/react && npm run build -w @quickmeet/server && npm run build -w @quickmeet/demo",
+    "typecheck": "npm run build -w @quickmeet/sdk && npm run typecheck -w @quickmeet/node && npm run build -w @quickmeet/react && npm run typecheck -w @quickmeet/server && npm run typecheck -w @quickmeet/demo",
+    "test": "npm run test -w @quickmeet/server",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "start": "npm run start -w @quickmeet/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@quickmeet/node": "^0.1.0",
+    "@quickmeet/react": "^0.1.0",
+    "@quickmeet/sdk": "^0.1.0"
+  }
+}

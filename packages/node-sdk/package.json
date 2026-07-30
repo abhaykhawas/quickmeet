@@ -1,0 +1,41 @@
+{
+  "name": "@quickmeet/node",
+  "version": "0.1.0",
+  "description": "QuickMeet server-to-server Node.js SDK",
+  "license": "Apache-2.0",
+  "keywords": [
+    "quickmeet",
+    "nodejs",
+    "video-conferencing",
+    "webrtc",
+    "livekit"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@quickmeet/sdk": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
