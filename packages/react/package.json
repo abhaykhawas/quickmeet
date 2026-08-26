@@ -1,6 +1,6 @@
 {
   "name": "@quickmeet/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Drop-in React video conference UI for QuickMeet",
   "license": "Apache-2.0",
   "keywords": [
