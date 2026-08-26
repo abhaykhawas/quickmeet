@@ -416,7 +416,13 @@ function ConnectedConferenceShell({
               label={isScreenShareEnabled ? 'Stop sharing' : 'Share screen'}
               onClick={() => toggleMedia(
                 'screen',
-                () => localParticipant.setScreenShareEnabled(!isScreenShareEnabled),
+                () => localParticipant.setScreenShareEnabled(
+                  !isScreenShareEnabled,
+                  {
+                    audio: true,
+                    systemAudio: 'include',
+                  },
+                ),
               )}
             >
               <ScreenIcon />
