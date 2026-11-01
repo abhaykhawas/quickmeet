@@ -218,6 +218,9 @@
 
 .qm-stage .lk-participant-tile {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -235,8 +238,11 @@
 
 .qm-stage .lk-participant-media-video,
 .qm-stage video {
+  grid-column: 1;
+  grid-row: 1;
   width: 100%;
   height: 100%;
+  min-height: 0;
   object-fit: cover;
 }
 
@@ -260,9 +266,6 @@
 }
 
 .qm-stage .qm-participant-rail .lk-participant-metadata {
-  right: 6px;
-  bottom: 6px;
-  left: 6px;
   padding: 5px 6px;
 }
 
@@ -291,24 +294,31 @@
 }
 
 .qm-stage .lk-participant-placeholder {
+  grid-column: 1;
+  grid-row: 1;
+  place-self: center;
   width: 92px;
   height: 92px;
   color: rgba(255, 255, 255, 0.7);
 }
 
+.qm-stage .lk-participant-tile[data-lk-video-muted='false'] .lk-participant-placeholder {
+  display: none;
+}
+
 .qm-stage .lk-participant-metadata {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  left: 12px;
+  position: relative;
+  grid-column: 1;
+  grid-row: 2;
+  right: auto;
+  bottom: auto;
+  left: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(10, 13, 17, 0.65);
-  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #171c23;
 }
 
 .qm-stage .lk-participant-name {
