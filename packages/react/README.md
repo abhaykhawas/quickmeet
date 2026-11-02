@@ -26,6 +26,8 @@ export function Call({ credentials }) {
         brandName="Acme"
         initialCameraEnabled
         initialMicrophoneEnabled
+        initialCameraDeviceId={selectedCameraId}
+        initialMicrophoneDeviceId={selectedMicrophoneId}
         onLeave={() => window.location.assign('/dashboard')}
       />
     </div>
@@ -36,6 +38,11 @@ export function Call({ credentials }) {
 Obtain `credentials` from your authenticated backend using `@quickmeet/node`, or
 from an invitation exchange using `@quickmeet/sdk`. The parent element must have
 a defined height.
+
+The optional device IDs come from `navigator.mediaDevices.enumerateDevices()`.
+The conference toolbar also lists available cameras and microphones and lets
+participants switch devices without leaving the room. Browsers may hide device
+names until the user grants camera or microphone permission.
 
 ## License
 

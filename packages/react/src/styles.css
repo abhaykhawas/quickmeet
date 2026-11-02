@@ -31,7 +31,7 @@
 .qm-conference {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 68px minmax(0, 1fr) 92px;
+  grid-template-rows: 68px minmax(0, 1fr) 124px;
   grid-template-areas:
     'topbar'
     'stage'
@@ -243,7 +243,8 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  object-fit: cover;
+  object-fit: contain;
+  background: #080a0d;
 }
 
 .qm-stage .qm-screen-tile video {
@@ -300,6 +301,12 @@
   width: 92px;
   height: 92px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.qm-stage .lk-participant-placeholder svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .qm-stage .lk-participant-tile[data-lk-video-muted='false'] .lk-participant-placeholder {
@@ -366,7 +373,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 12px 24px 18px;
+  padding: 12px 24px;
   border-top: 1px solid var(--qm-line);
   background: #12171d;
 }
@@ -381,6 +388,28 @@
   display: flex;
   align-items: center;
   gap: 9px;
+}
+
+.qm-device-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 260px;
+}
+
+.qm-device-control select {
+  width: 260px;
+  max-width: 100%;
+  height: 24px;
+  padding: 2px 4px;
+  border: 1px solid var(--qm-line);
+  border-radius: 6px;
+  color: var(--qm-muted);
+  background: var(--qm-stage);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .qm-control {
@@ -623,7 +652,7 @@
 
 .qm-person {
   display: grid;
-  grid-template-columns: 38px 1fr 10px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 11px 10px;
@@ -634,16 +663,28 @@
   background: rgba(255, 255, 255, 0.035);
 }
 
-.qm-person strong,
-.qm-person span {
+.qm-person-info,
+.qm-person > div:not(.qm-person-devices) {
+  min-width: 0;
+}
+
+.qm-person-info strong,
+.qm-person-info > span,
+.qm-person > div:not(.qm-person-devices) strong,
+.qm-person > div:not(.qm-person-devices) > span {
   display: block;
 }
 
-.qm-person strong {
+.qm-person-info strong,
+.qm-person > div:not(.qm-person-devices) strong {
+  overflow: hidden;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.qm-person div > span {
+.qm-person-info > span,
+.qm-person > div:not(.qm-person-devices) > span {
   margin-top: 2px;
   color: var(--qm-muted);
   font-size: 11px;
@@ -658,7 +699,39 @@
 
 .qm-status-dot.is-speaking {
   background: var(--qm-mint);
-  box-shadow: 0 0 0 4px rgba(123, 224, 188, 0.1);
+}
+
+.qm-speaking-label {
+  color: var(--qm-mint);
+  font-weight: 600;
+}
+
+.qm-person-devices {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qm-person-device {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--qm-line);
+  border-radius: 7px;
+}
+
+.qm-person-device svg {
+  width: 14px;
+  height: 14px;
+}
+
+.qm-person-device.is-on {
+  color: var(--qm-mint);
+}
+
+.qm-person-device.is-off {
+  color: var(--qm-muted);
 }
 
 @container (max-width: 820px) {
@@ -696,6 +769,7 @@
   }
 
   .qm-main-controls {
+    min-width: 0;
     justify-content: flex-start;
     overflow-x: auto;
   }

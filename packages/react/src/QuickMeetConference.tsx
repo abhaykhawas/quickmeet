@@ -6,6 +6,7 @@ import {
   useChat,
   useLocalParticipant,
   useParticipants,
+  useRoomContext,
   useTracks,
 } from '@livekit/components-react';
 import type { JoinCredentials } from '@quickmeet/sdk';
@@ -42,6 +43,8 @@ export interface QuickMeetConferenceProps {
   credentials: JoinCredentials;
   initialCameraEnabled?: boolean;
   initialMicrophoneEnabled?: boolean;
+  initialCameraDeviceId?: string;
+  initialMicrophoneDeviceId?: string;
   className?: string;
   brandName?: string;
   inviteUrl?: string;
@@ -74,11 +77,10 @@ function displayRole(participant: Participant, localRole?: string): string {
 }
 
 function Initials({ name }: { name: string }) {
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts.length === 1
+    ? parts[0]?.slice(0, 2).toUpperCase()
+    : parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
   return <span className="qm-avatar">{initials || '?'}</span>;
 }
 
@@ -208,14 +210,32 @@ function PeoplePanel({
           return (
             <div className="qm-person" key={participant.identity}>
               <Initials name={participant.name ?? participant.identity} />
-              <div>
+              <div className="qm-person-info">
                 <strong>
                   {participant.name ?? participant.identity}
                   {participant.isLocal ? ' (you)' : ''}
                 </strong>
-                <span>{role === 'cohost' ? 'Co-host' : role[0]?.toUpperCase() + role.slice(1)}</span>
+                <span>
+                  {role === 'cohost' ? 'Co-host' : role[0]?.toUpperCase() + role.slice(1)}
+                  {participant.isSpeaking && <b className="qm-speaking-label"> · Speaking</b>}
+                </span>
               </div>
-              <span className={`qm-status-dot ${participant.isSpeaking ? 'is-speaking' : ''}`} />
+              <div className="qm-person-devices">
+                <span
+                  className={`qm-person-device ${participant.isMicrophoneEnabled ? 'is-on' : 'is-off'}`}
+                  title={participant.isMicrophoneEnabled ? 'Microphone on' : 'Microphone off'}
+                  aria-label={participant.isMicrophoneEnabled ? 'Microphone on' : 'Microphone off'}
+                >
+                  {participant.isMicrophoneEnabled ? <MicIcon /> : <MicOffIcon />}
+                </span>
+                <span
+                  className={`qm-person-device ${participant.isCameraEnabled ? 'is-on' : 'is-off'}`}
+                  title={participant.isCameraEnabled ? 'Camera on' : 'Camera off'}
+                  aria-label={participant.isCameraEnabled ? 'Camera on' : 'Camera off'}
+                >
+                  {participant.isCameraEnabled ? <CameraIcon /> : <CameraOffIcon />}
+                </span>
+              </div>
             </div>
           );
         })}
@@ -229,6 +249,8 @@ function ConnectedConferenceShell({
   brandName,
   inviteUrl,
   connectionState,
+  initialCameraDeviceId,
+  initialMicrophoneDeviceId,
   onLeave,
   onError,
 }: {
@@ -236,6 +258,8 @@ function ConnectedConferenceShell({
   brandName: string;
   inviteUrl?: string;
   connectionState: ConnectionState;
+  initialCameraDeviceId?: string;
+  initialMicrophoneDeviceId?: string;
   onLeave: () => void;
   onError?: (error: Error) => void;
 }) {
@@ -250,9 +274,13 @@ function ConnectedConferenceShell({
     isMicrophoneEnabled,
     isScreenShareEnabled,
   } = useLocalParticipant();
+  const room = useRoomContext();
   const [panel, setPanel] = useState<QuickMeetSidePanel>(null);
   const [copied, setCopied] = useState(false);
   const [mediaBusy, setMediaBusy] = useState<string | null>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [cameraDeviceId, setCameraDeviceId] = useState(initialCameraDeviceId ?? '');
+  const [microphoneDeviceId, setMicrophoneDeviceId] = useState(initialMicrophoneDeviceId ?? '');
   const features = credentials.meeting.features;
   const cameraTracks = useMemo(
     () => tracks.filter((track) => track.source === Track.Source.Camera),
@@ -265,6 +293,34 @@ function ConnectedConferenceShell({
   const cameraGrid = getBalancedGrid(cameraTracks.length);
   const railTracks = cameraTracks.slice(0, 4);
   const hiddenRailCount = Math.max(0, cameraTracks.length - railTracks.length);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    const refresh = () => {
+      void navigator.mediaDevices.enumerateDevices().then(setDevices).catch(() => {});
+    };
+    refresh();
+    navigator.mediaDevices.addEventListener('devicechange', refresh);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', refresh);
+  }, [isCameraEnabled, isMicrophoneEnabled]);
+
+  async function selectDevice(kind: 'audioinput' | 'videoinput', deviceId: string) {
+    const enabled = kind === 'audioinput' ? isMicrophoneEnabled : isCameraEnabled;
+    const activeId = deviceId || devices.find((device) => device.kind === kind && device.deviceId)?.deviceId;
+    if (enabled && activeId) {
+      setMediaBusy(kind);
+      try {
+        await room.switchActiveDevice(kind, activeId);
+      } catch (error) {
+        onError?.(error instanceof Error ? error : new Error(String(error)));
+        setMediaBusy(null);
+        return;
+      }
+      setMediaBusy(null);
+    }
+    if (kind === 'audioinput') setMicrophoneDeviceId(deviceId);
+    else setCameraDeviceId(deviceId);
+  }
 
   async function toggleMedia(
     kind: 'camera' | 'microphone' | 'screen',
@@ -384,30 +440,68 @@ function ConnectedConferenceShell({
         </div>
         <div className="qm-main-controls">
           {features.microphone && (
-            <ControlButton
-              active={!isMicrophoneEnabled}
-              disabled={mediaBusy === 'microphone'}
-              label={isMicrophoneEnabled ? 'Mute' : 'Unmute'}
-              onClick={() => toggleMedia(
-                'microphone',
-                () => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled),
-              )}
-            >
-              {isMicrophoneEnabled ? <MicIcon /> : <MicOffIcon />}
-            </ControlButton>
+            <div className="qm-device-control">
+              <ControlButton
+                active={!isMicrophoneEnabled}
+                disabled={mediaBusy === 'microphone'}
+                label={isMicrophoneEnabled ? 'Mute' : 'Unmute'}
+                onClick={() => toggleMedia(
+                  'microphone',
+                  () => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled, {
+                    deviceId: microphoneDeviceId || undefined,
+                  }),
+                )}
+              >
+                {isMicrophoneEnabled ? <MicIcon /> : <MicOffIcon />}
+              </ControlButton>
+              <select
+                aria-label="Choose microphone"
+                title={devices.find((device) => device.deviceId === microphoneDeviceId)?.label || 'Choose microphone'}
+                value={microphoneDeviceId}
+                disabled={mediaBusy === 'audioinput'}
+                onChange={(event) => void selectDevice('audioinput', event.target.value)}
+              >
+                <option value="">Default microphone</option>
+                {devices.filter((device) => device.kind === 'audioinput' && device.deviceId && device.deviceId !== 'default')
+                  .map((device, index) => (
+                    <option value={device.deviceId} key={device.deviceId}>
+                      {device.label || `Microphone ${index + 1}`}
+                    </option>
+                  ))}
+              </select>
+            </div>
           )}
           {features.camera && (
-            <ControlButton
-              active={!isCameraEnabled}
-              disabled={mediaBusy === 'camera'}
-              label={isCameraEnabled ? 'Stop video' : 'Start video'}
-              onClick={() => toggleMedia(
-                'camera',
-                () => localParticipant.setCameraEnabled(!isCameraEnabled),
-              )}
-            >
-              {isCameraEnabled ? <CameraIcon /> : <CameraOffIcon />}
-            </ControlButton>
+            <div className="qm-device-control">
+              <ControlButton
+                active={!isCameraEnabled}
+                disabled={mediaBusy === 'camera'}
+                label={isCameraEnabled ? 'Stop video' : 'Start video'}
+                onClick={() => toggleMedia(
+                  'camera',
+                  () => localParticipant.setCameraEnabled(!isCameraEnabled, {
+                    deviceId: cameraDeviceId || undefined,
+                  }),
+                )}
+              >
+                {isCameraEnabled ? <CameraIcon /> : <CameraOffIcon />}
+              </ControlButton>
+              <select
+                aria-label="Choose camera"
+                title={devices.find((device) => device.deviceId === cameraDeviceId)?.label || 'Choose camera'}
+                value={cameraDeviceId}
+                disabled={mediaBusy === 'videoinput'}
+                onChange={(event) => void selectDevice('videoinput', event.target.value)}
+              >
+                <option value="">Default camera</option>
+                {devices.filter((device) => device.kind === 'videoinput' && device.deviceId && device.deviceId !== 'default')
+                  .map((device, index) => (
+                    <option value={device.deviceId} key={device.deviceId}>
+                      {device.label || `Camera ${index + 1}`}
+                    </option>
+                  ))}
+              </select>
+            </div>
           )}
           {features.screenShare && (
             <ControlButton
@@ -462,6 +556,8 @@ export function QuickMeetConference({
   credentials,
   initialCameraEnabled = true,
   initialMicrophoneEnabled = true,
+  initialCameraDeviceId,
+  initialMicrophoneDeviceId,
   className = '',
   brandName = 'QuickMeet',
   inviteUrl,
@@ -493,10 +589,14 @@ export function QuickMeetConference({
       if (!active) return;
         const tasks: Promise<unknown>[] = [];
         if (credentials.meeting.features.camera && initialCameraEnabled) {
-          tasks.push(room.localParticipant.setCameraEnabled(true));
+          tasks.push(room.localParticipant.setCameraEnabled(true, {
+            deviceId: initialCameraDeviceId || undefined,
+          }));
         }
         if (credentials.meeting.features.microphone && initialMicrophoneEnabled) {
-          tasks.push(room.localParticipant.setMicrophoneEnabled(true));
+          tasks.push(room.localParticipant.setMicrophoneEnabled(true, {
+            deviceId: initialMicrophoneDeviceId || undefined,
+          }));
         }
         const results = await Promise.allSettled(tasks);
         const rejected = results.find((result) => result.status === 'rejected');
@@ -521,6 +621,8 @@ export function QuickMeetConference({
     credentials,
     initialCameraEnabled,
     initialMicrophoneEnabled,
+    initialCameraDeviceId,
+    initialMicrophoneDeviceId,
     onError,
     room,
   ]);
@@ -538,6 +640,8 @@ export function QuickMeetConference({
           brandName={brandName}
           inviteUrl={inviteUrl}
           connectionState={connectionState}
+          initialCameraDeviceId={initialCameraDeviceId}
+          initialMicrophoneDeviceId={initialMicrophoneDeviceId}
           onLeave={leave}
           onError={onError}
         />

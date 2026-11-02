@@ -29,6 +29,7 @@ export default function App() {
   const [created, setCreated] = useState<CreateMeetingResult | null>(null);
   const [meeting, setMeeting] = useState<MeetingSummary | null>(null);
   const [credentials, setCredentials] = useState<JoinCredentials | null>(null);
+  const [hostAccessKey, setHostAccessKey] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const path = window.location.pathname;
@@ -59,27 +60,17 @@ export default function App() {
 
   async function enterCreated() {
     if (!created) return;
-    setBusy(true);
     setError('');
-    try {
-      const joined = await client.joinMeeting(created.meeting.slug, {
-        name: created.meeting.host.name,
-        accessKey: created.hostAccessKey,
-      });
-      window.history.replaceState({}, '', `/join/${created.meeting.slug}`);
-      setCredentials(joined);
-    } catch (caught) {
-      setError(messageFor(caught));
-    } finally {
-      setBusy(false);
-    }
+    setMeeting(created.meeting);
+    setHostAccessKey(created.hostAccessKey);
+    window.history.replaceState({}, '', `/join/${created.meeting.slug}`);
   }
 
   async function join(name: string, accessKey?: string) {
     setBusy(true);
     setError('');
     try {
-      setCredentials(await client.joinMeeting(joinSlug, { name, accessKey }));
+      setCredentials(await client.joinMeeting(joinSlug, { name, accessKey: accessKey ?? hostAccessKey }));
     } catch (caught) {
       setError(messageFor(caught));
     } finally {
@@ -90,6 +81,8 @@ export default function App() {
   if (credentials) {
     const cameraSetting = sessionStorage.getItem('quickmeet.initialCamera');
     const microphoneSetting = sessionStorage.getItem('quickmeet.initialMicrophone');
+    const cameraDeviceId = sessionStorage.getItem('quickmeet.cameraDeviceId') || undefined;
+    const microphoneDeviceId = sessionStorage.getItem('quickmeet.microphoneDeviceId') || undefined;
     return (
       <div className="conference-page">
         <Suspense fallback={<div className="conference-loading">Preparing your room…</div>}>
@@ -98,6 +91,8 @@ export default function App() {
             brandName="QuickMeet"
             initialCameraEnabled={cameraSetting !== 'false'}
             initialMicrophoneEnabled={microphoneSetting !== 'false'}
+            initialCameraDeviceId={cameraDeviceId}
+            initialMicrophoneDeviceId={microphoneDeviceId}
             inviteUrl={credentials.meeting.access === 'open'
               ? `${window.location.origin}/join/${credentials.meeting.slug}`
               : undefined}
@@ -128,6 +123,7 @@ export default function App() {
     return (
       <JoinMeeting
         meeting={meeting}
+        initialName={created?.meeting.slug === joinSlug ? created.meeting.host.name : undefined}
         loading={busy}
         error={error}
         onJoin={join}

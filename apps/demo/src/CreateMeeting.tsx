@@ -149,7 +149,7 @@ export function CreateMeeting({
 
           {error && <p className="form-error">{error}</p>}
           <button className="primary-action wide" type="button" onClick={onEnter} disabled={busy}>
-            {busy ? 'Opening room…' : 'Enter as host'}
+            {busy ? 'Opening room…' : 'Set up devices & enter'}
             <span>→</span>
           </button>
         </main>
