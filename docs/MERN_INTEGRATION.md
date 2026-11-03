@@ -17,7 +17,7 @@ The deployed resources used by this guide are:
 | QuickMeet API | `https://quickmeet-api-uui6.onrender.com` |
 | Hosted demo | `https://quickmeet-video.netlify.app` |
 | Express SDK | `@quickmeet/node@0.1.0` |
-| React component | `@quickmeet/react@0.1.0` |
+| React component | `@quickmeet/react@0.1.2` |
 | Browser SDK | `@quickmeet/sdk@0.1.0` |
 
 The hosted demo proves the complete stack is running. A MERN application does
@@ -125,8 +125,8 @@ instance's URL and API key in the same MERN code below.
 
 ## 3. Install the SDK packages
 
-The QuickMeet packages are published publicly on npm. Version `0.1.0` is the
-version tested by this guide.
+The QuickMeet packages are published publicly on npm. This guide uses
+`@quickmeet/react@0.1.2` with `@quickmeet/node@0.1.0` and `@quickmeet/sdk@0.1.0`.
 
 In the Express application:
 
@@ -139,7 +139,7 @@ In the React application:
 
 ```bash
 cd my-mern-app/client
-npm install @quickmeet/react@0.1.0
+npm install @quickmeet/react@0.1.2
 ```
 
 `@quickmeet/react` installs its compatible LiveKit and browser SDK dependencies.
@@ -153,7 +153,7 @@ cd my-mern-app/client
 npm install @quickmeet/sdk@0.1.0
 ```
 
-You can omit `@0.1.0` to install the latest published version. Pinning the
+You can omit a version suffix to install the latest published version. Pinning the
 version makes an example application reproducible.
 
 ## 4. Express backend
@@ -1084,7 +1084,7 @@ before operating the deployment as a public SaaS.
 ## 11. Integration checklist
 
 - [ ] `npm install @quickmeet/node@0.1.0` succeeds in the Express application.
-- [ ] `npm install @quickmeet/react@0.1.0` succeeds in the React application.
+- [ ] `npm install @quickmeet/react@0.1.2` succeeds in the React application.
 - [ ] `https://quickmeet-api-uui6.onrender.com/health` returns `200`.
 - [ ] Express has the QuickMeet server API key supplied by the deployment owner.
 - [ ] The API key is absent from the React bundle and browser network requests.
